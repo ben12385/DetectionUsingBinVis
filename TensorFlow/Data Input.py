@@ -63,37 +63,63 @@ iterator = dataset.make_one_shot_iterator()
 
 next_element = iterator.get_next()
 
-print(next_element)
+def convLayer(input, shape, num):
+    with tf.name_scope('conv' + str(num)):
+        with tf.name_scope('weights'):
+            W_conv = tf.Variable(tf.truncated_normal(shape, stddev=0.1))
+            variable_summaries(W_conv)
+        with tf.name_scope('biases'):
+            b_conv = tf.Variable(tf.constant(0.1, shape=[shape[3]]))
+            variable_summaries(b_conv)
+        with tf.name_scope('Wx_plus_b'):
+            c_conv = tf.nn.conv2d(input, W_conv, strides=[1, 1, 1, 1], padding='SAME')
+            h_conv = tf.nn.relu(c_conv + b_conv)
+            tf.summary.histogram('pre_activations', h_conv)
+        return h_conv
 
-with tf.name_scope('conv1'):
-    with tf.name_scope('weights'):
-        W_conv1 = tf.Variable(tf.truncated_normal([10, 10, 3, 2], stddev=0.1))
-        variable_summaries(W_conv1)
-    with tf.name_scope('biases'):
-        b_conv1 = tf.Variable(tf.constant(0.1, shape=[2]))
-        variable_summaries(b_conv1)
-    with tf.name_scope('Wx_plus_b'):
-        c_conv1 = tf.nn.conv2d(next_element[0], W_conv1, strides=[1, 1, 1, 1], padding='SAME')
-        h_conv1 = tf.nn.relu(c_conv1 + b_conv1)
-        tf.summary.histogram('pre_activations', h_conv1)
-    
 
+#---------------------------------------------CNN Structure----------------------------------------------------
+
+h_conv1 = convLayer(next_element[0], [10, 10, 3, 2], 1)
+
+h_conv2 = convLayer(h_conv1, [10, 10, 2, 5], 2)
+
+h_conv3 = convLayer(h_conv2, [10, 10, 5, 10], 3)
+   
 with tf.name_scope('pool1'):
-    h_pool1 = tf.nn.max_pool(h_conv1, ksize=[1, 2, 2, 1], strides=[1, 4, 4, 1], padding='SAME')
-    h_pool2 = tf.nn.max_pool(h_pool1, ksize=[1, 2, 2, 1], strides=[1, 4, 4, 1], padding='SAME')
+    h_pool1 = tf.nn.max_pool(h_conv3, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+
+h_conv4 = convLayer(h_pool1, [4, 4, 10, 15], 4)
+
+h_conv5 = convLayer(h_conv4, [4, 4, 15, 20], 5)
+
+h_conv6 = convLayer(h_conv5, [4, 4, 20, 25], 6)
+   
+with tf.name_scope('pool2'):
+    h_pool2 = tf.nn.max_pool(h_conv6, ksize=[1, 4, 4, 1], strides=[1, 4, 4, 1], padding='SAME')
+
+h_conv7 = convLayer(h_pool2, [2, 2, 25, 26], 7)
+
+h_conv8 = convLayer(h_conv7, [2, 2, 26, 27], 8)
+
+h_conv9 = convLayer(h_conv8, [2, 2, 27, 28], 9)
+   
+with tf.name_scope('pool3'):
+    h_pool3 = tf.nn.max_pool(h_conv9, ksize=[1, 4, 4, 1], strides=[1, 4, 4, 1], padding='SAME')
+    print(h_pool3)
 
 with tf.name_scope('fc1'):
-    W_fc1 = tf.Variable(tf.truncated_normal([8192, 1024], stddev=0.1))
+    W_fc1 = tf.Variable(tf.truncated_normal([28672, 1024], stddev=0.1))
     b_fc1 = tf.Variable(tf.constant(0.1, shape=[1024]))
 
-    h_conv1_flat = tf.reshape(h_pool2, [-1, 8192])
+    h_conv1_flat = tf.reshape(h_pool3, [-1, 28672])
     h_fc1 = tf.nn.relu(tf.matmul(h_conv1_flat, W_fc1) + b_fc1)
 
 with tf.name_scope('fc2'):
     W_fc2 = tf.Variable(tf.truncated_normal([1024, 1], stddev=0.1))
     b_fc2 = tf.Variable(tf.constant(0.1, shape=[1]))
     y = tf.matmul(h_fc1, W_fc2) + b_fc2
-    tf.summary.scalar(next_element[1])
+    tf.summary.scalar("test", next_element[1])
 
 with tf.name_scope('loss'):
    cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=next_element[1], logits=y)
@@ -123,10 +149,7 @@ with tf.Session(config=tf.ConfigProto(log_device_placement=False)) as sess:
         #print(train_step.run(feed_dict={x_image: next_element[0], y_: next_element[1]}))
         summary, output = sess.run([merged,train_step])
         train_writer.add_summary(summary, i)
-    
 
-    #summary, _ = sess.run([merged, train_step], feed_dict=feed_dict(True))
-    #train_writer.add_summary(summary, i)
 
 
 print("Done")
