@@ -22,8 +22,8 @@ def variable_summaries(var):
 def _parse_image_1024_malware(filename, value):
   image_string = tf.read_file(filename)
   image_decoded = tf.image.decode_png(image_string)
-  image_resized = tf.image.pad_to_bounding_box(image_decoded, 0, 0, 1024, 1024)
-  image_complete_resized = tf.reshape(image_resized, [1, 1024, 1024, 3])
+  image_resized = tf.image.resize_images(image_decoded, [512,512])
+  image_complete_resized = tf.reshape(image_resized, [1, 512, 512, 3])
   
   image_converted = tf.image.convert_image_dtype(image_complete_resized, tf.float32)
 
@@ -106,40 +106,12 @@ actual = tf.add(next_element[1], [0,0])
 
 h_conv1 = convLayer(next_element[0], [4, 4, 3, 8], 1)
 
-h_conv2 = convLayer(h_conv1, [4, 4, 8, 8], 2)
-
-h_pool1 = poolLayer(h_conv2, [1, 2, 2, 1], 1)
-
-h_conv3 = convLayer(h_pool1, [4, 4, 8, 12], 3)
-
-h_conv4 = convLayer(h_conv3, [4, 4, 12, 12], 3)
-   
-h_pool2 = poolLayer(h_conv4, [1, 2, 2, 1], 2)
-
-h_conv5 = convLayer(h_pool2, [4, 4, 12, 14], 3)
-
-h_conv6 = convLayer(h_conv5, [4, 4, 14, 14], 3)
-   
-h_pool3 = poolLayer(h_conv6, [1, 2, 2, 1], 3)
-
-h_conv7 = convLayer(h_pool3, [3, 3, 14, 16], 3)
-
-h_conv8 = convLayer(h_conv7, [3, 3, 16, 16], 3)
-   
-h_pool4 = poolLayer(h_conv8, [1, 2, 2, 1], 3)
-
-h_conv9 = convLayer(h_pool4, [2, 2, 16, 18], 3)
-
-h_conv10 = convLayer(h_conv9, [2, 2, 18, 18], 3)
-   
-h_pool5 = poolLayer(h_conv10, [1, 2, 2, 1], 3)
-
 
 with tf.name_scope('fc1'):
-    W_fc1 = tf.Variable(tf.truncated_normal([18432, 4096], stddev=0.1))
+    W_fc1 = tf.Variable(tf.truncated_normal([786432, 4096], stddev=0.1))
     b_fc1 = tf.Variable(tf.constant(0.1, shape=[4096]))
 
-    h_conv1_flat = tf.reshape(h_pool5, [-1, 18432])
+    h_conv1_flat = tf.reshape(next_element[1], [-1, 786432])
     h_fc1 = tf.nn.relu(tf.matmul(h_conv1_flat, W_fc1) + b_fc1)
     variable_summaries(W_fc1)
     variable_summaries(b_fc1)
