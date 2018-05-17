@@ -22,8 +22,8 @@ def variable_summaries(var):
 def _parse_image_1024_malware(filename, value):
   image_string = tf.read_file(filename)
   image_decoded = tf.image.decode_png(image_string)
-  image_resized = tf.image.resize_images(image_decoded, [512,512])
-  image_complete_resized = tf.reshape(image_resized, [1, 512, 512, 3])
+  image_resized = tf.image.resize_images(image_decoded, [256,256])
+  image_complete_resized = tf.reshape(image_resized, [1, 256, 256, 3])
   
   image_converted = tf.image.convert_image_dtype(image_complete_resized, tf.float32)
 

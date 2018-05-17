@@ -2,7 +2,7 @@ import tensorflow as tf
 import os
 import random
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "6"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 def variable_summaries(var):
   """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
@@ -23,6 +23,7 @@ def _parse_image_1024_malware(filename, value):
   image_string = tf.read_file(filename)
   image_decoded = tf.image.decode_png(image_string)
   image_resized = tf.image.pad_to_bounding_box(image_decoded, 0, 0, 1024, 1024)
+  #image_resized = tf.image.resize_images(image_decoded, [1024,1024])
   image_complete_resized = tf.reshape(image_resized, [1, 1024, 1024, 3])
   
   image_converted = tf.image.convert_image_dtype(image_complete_resized, tf.float32)
@@ -112,34 +113,40 @@ h_pool1 = poolLayer(h_conv2, [1, 2, 2, 1], 1)
 
 h_conv3 = convLayer(h_pool1, [4, 4, 8, 12], 3)
 
-h_conv4 = convLayer(h_conv3, [4, 4, 12, 12], 3)
+h_conv4 = convLayer(h_conv3, [4, 4, 12, 12], 4)
    
 h_pool2 = poolLayer(h_conv4, [1, 2, 2, 1], 2)
 
-h_conv5 = convLayer(h_pool2, [4, 4, 12, 14], 3)
+h_conv5 = convLayer(h_pool2, [4, 4, 12, 14], 5)
 
-h_conv6 = convLayer(h_conv5, [4, 4, 14, 14], 3)
+h_conv6 = convLayer(h_conv5, [4, 4, 14, 14], 6)
    
 h_pool3 = poolLayer(h_conv6, [1, 2, 2, 1], 3)
 
-h_conv7 = convLayer(h_pool3, [3, 3, 14, 16], 3)
+h_conv7 = convLayer(h_pool3, [3, 3, 14, 16], 7)
 
-h_conv8 = convLayer(h_conv7, [3, 3, 16, 16], 3)
+h_conv8 = convLayer(h_conv7, [3, 3, 16, 16], 8)
    
-h_pool4 = poolLayer(h_conv8, [1, 2, 2, 1], 3)
+h_pool4 = poolLayer(h_conv8, [1, 2, 2, 1], 4)
 
-h_conv9 = convLayer(h_pool4, [2, 2, 16, 18], 3)
+h_conv9 = convLayer(h_pool4, [2, 2, 16, 18], 9)
 
-h_conv10 = convLayer(h_conv9, [2, 2, 18, 18], 3)
+h_conv10 = convLayer(h_conv9, [2, 2, 18, 18], 10)
    
-h_pool5 = poolLayer(h_conv10, [1, 2, 2, 1], 3)
+h_pool5 = poolLayer(h_conv10, [1, 2, 2, 1], 5)
+
+h_conv11 = convLayer(h_pool5, [2, 2, 18, 20], 11)
+
+h_conv12 = convLayer(h_conv11, [2, 2, 20, 20], 12)
+   
+h_pool6 = poolLayer(h_conv12, [1, 2, 2, 1], 6)
 
 
 with tf.name_scope('fc1'):
-    W_fc1 = tf.Variable(tf.truncated_normal([18432, 4096], stddev=0.1))
+    W_fc1 = tf.Variable(tf.truncated_normal([5120, 4096], stddev=0.1))
     b_fc1 = tf.Variable(tf.constant(0.1, shape=[4096]))
 
-    h_conv1_flat = tf.reshape(h_pool5, [-1, 18432])
+    h_conv1_flat = tf.reshape(h_pool6, [-1, 5120])
     h_fc1 = tf.nn.relu(tf.matmul(h_conv1_flat, W_fc1) + b_fc1)
     variable_summaries(W_fc1)
     variable_summaries(b_fc1)
@@ -168,7 +175,9 @@ with tf.name_scope('train'):
 
 with tf.name_scope('accuracy'):
   with tf.name_scope('correct_prediction'):
-    prediction_difference = tf.abs(tf.subtract(y, tf.to_float(next_element[1])))
+    prediction = tf.argmax(y)
+    actual = tf.argmax(next_element[1])
+    correct = tf.equal(prediction, actual)
 
 
 merged = tf.summary.merge_all()
@@ -189,7 +198,9 @@ with tf.Session(config=config) as sess:
 #    print(sess.run([y,loss,actual]))
     for i in range(0,len(listOfFilesSafe)+len(listOfFilesMalware)/2):
         try:
-            if(i%10 == 0):
+            if(i%1000 == 0):
+                sess.run(correct)
+            elif(i%100 == 0):
                 summary, output = sess.run([merged,train_step])
                 train_writer.add_summary(summary, i)
                 save_path = saver.save(sess, './CheckPoint/ImageModel.ckpt')
