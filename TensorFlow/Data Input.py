@@ -2,7 +2,7 @@ import tensorflow as tf
 import os
 import random
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 def variable_summaries(var):
   """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
@@ -123,21 +123,21 @@ h_conv6 = convLayer(h_conv5, [4, 4, 14, 14], 6)
    
 h_pool3 = poolLayer(h_conv6, [1, 2, 2, 1], 3)
 
-h_conv7 = convLayer(h_pool3, [3, 3, 14, 16], 7)
+h_conv7 = convLayer(h_pool3, [4, 4, 14, 16], 7)
 
-h_conv8 = convLayer(h_conv7, [3, 3, 16, 16], 8)
+h_conv8 = convLayer(h_conv7, [4, 4, 16, 16], 8)
    
 h_pool4 = poolLayer(h_conv8, [1, 2, 2, 1], 4)
 
-h_conv9 = convLayer(h_pool4, [2, 2, 16, 18], 9)
+h_conv9 = convLayer(h_pool4, [4, 4, 16, 18], 9)
 
-h_conv10 = convLayer(h_conv9, [2, 2, 18, 18], 10)
+h_conv10 = convLayer(h_conv9, [4, 4, 18, 18], 10)
    
 h_pool5 = poolLayer(h_conv10, [1, 2, 2, 1], 5)
 
-h_conv11 = convLayer(h_pool5, [2, 2, 18, 20], 11)
+h_conv11 = convLayer(h_pool5, [4, 4, 18, 20], 11)
 
-h_conv12 = convLayer(h_conv11, [2, 2, 20, 20], 12)
+h_conv12 = convLayer(h_conv11, [4, 4, 20, 20], 12)
    
 h_pool6 = poolLayer(h_conv12, [1, 2, 2, 1], 6)
 
@@ -177,16 +177,17 @@ with tf.name_scope('accuracy'):
   with tf.name_scope('correct_prediction'):
     prediction = tf.argmax(y)
     actual = tf.argmax(next_element[1])
-    correct = tf.equal(prediction, actual)
+    correct = tf.reshape(tf.cast(tf.equal(prediction, actual), tf.int32), [1, -1])
+    tf.summary.scalar('correct', correct)
 
 
 merged = tf.summary.merge_all()
-train_writer = tf.summary.FileWriter('./ImageData')
+train_writer = tf.summary.FileWriter('./ImageData2')
 train_writer.add_graph(tf.get_default_graph())
 
 config = tf.ConfigProto(log_device_placement=False)
 config.gpu_options.allow_growth = True
-config.gpu_options.per_process_gpu_memory_fraction = 0.1
+#config.gpu_options.per_process_gpu_memory_fraction = 0.5
 
 
 saver = tf.train.Saver();
@@ -199,11 +200,14 @@ with tf.Session(config=config) as sess:
     for i in range(0,len(listOfFilesSafe)+len(listOfFilesMalware)/2):
         try:
             if(i%1000 == 0):
-                sess.run(correct)
+                summary, output = sess.run([merged,correct])
+		train_writer.add_summary(summary, i)
+                save_path = saver.save(sess, './CheckPoint2/ImageModel.ckpt')
+                print("Done" + str(i))
             elif(i%100 == 0):
                 summary, output = sess.run([merged,train_step])
                 train_writer.add_summary(summary, i)
-                save_path = saver.save(sess, './CheckPoint/ImageModel.ckpt')
+                save_path = saver.save(sess, './CheckPoint2/ImageModel.ckpt')
                 print("Done" + str(i))
             else:
                 summary, output = sess.run([merged,train_step])        
